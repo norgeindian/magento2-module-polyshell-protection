@@ -32,8 +32,8 @@ class PolyglotFileDetector
      */
     private const PHP_CODE_PATTERNS = [
         '<?php',
-        '<?=',
         'eval(',
+        'assert(',
         'base64_decode',
         'system(',
         'exec(',
@@ -46,6 +46,7 @@ class PolyglotFileDetector
         'fopen(',
         '@copy',
         '$_FILES',
+        '$_GET',
         '$_REQUEST',
         '$_COOKIE',
         '$_POST',
@@ -55,7 +56,6 @@ class PolyglotFileDetector
         'ob_get_clean',
         'strip_tags',
         'preg_replace',
-        '/e"',  // Deprecated /e modifier
     ];
 
     /**
@@ -128,10 +128,7 @@ class PolyglotFileDetector
      */
     private function assertNoEmbeddedCode(string $binary, ?string $filename): void
     {
-        $content = $binary;
-
-        // Convert binary to searchable format (handle null bytes gracefully)
-        $contentSearchable = str_replace("\x00", '', $content);
+        $contentSearchable = $binary;
 
         // Check for PHP code markers
         foreach (self::PHP_CODE_PATTERNS as $pattern) {
@@ -140,6 +137,12 @@ class PolyglotFileDetector
                     __('Uploaded file contains executable code and is not permitted for security reasons.')
                 );
             }
+        }
+
+        if (preg_match('/<\?=[\s$(`@]/', $contentSearchable) === 1) {
+            throw new InputException(
+                __('Uploaded file contains executable code and is not permitted for security reasons.')
+            );
         }
 
         // Check for known attack signatures
