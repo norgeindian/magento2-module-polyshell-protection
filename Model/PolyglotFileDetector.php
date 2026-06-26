@@ -132,6 +132,11 @@ class PolyglotFileDetector
 
         // Check for PHP code markers
         foreach (self::PHP_CODE_PATTERNS as $pattern) {
+            // <?= is only 3 bytes and occurs by chance in compressed binary data.
+            // Require a PHP-valid character after it to avoid false positives.
+            if ($pattern === '<?=' && !preg_match('/<\?=[\s$a-zA-Z_(\'"]/', $contentSearchable)) {
+                continue;
+            }
             if (stripos($contentSearchable, $pattern) !== false) {
                 throw new InputException(
                     __('Uploaded file contains executable code and is not permitted for security reasons.')
